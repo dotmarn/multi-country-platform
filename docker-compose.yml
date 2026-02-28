@@ -1,0 +1,232 @@
+version: '3.8'
+
+services:
+  # ─── PostgreSQL ────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: mcp-postgres
+    environment:
+      POSTGRES_USER: laravel
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: hr_service_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - platform-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laravel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── RabbitMQ ──────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: mcp-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - platform-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ─── Redis ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - platform-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Soketi (WebSocket Server) ─────────────────────────
+  soketi:
+    image: quay.io/soketi/soketi:1.6-16-debian
+    container_name: mcp-soketi
+    environment:
+      SOKETI_DEBUG: "1"
+      SOKETI_DEFAULT_APP_ID: "multi-country-app"
+      SOKETI_DEFAULT_APP_KEY: "app-key"
+      SOKETI_DEFAULT_APP_SECRET: "app-secret"
+    ports:
+      - "6001:6001"
+      - "9601:9601"
+    networks:
+      - platform-net
+
+  # ─── HR Service ────────────────────────────────────────
+  hr-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: mcp-hr-service
+    volumes:
+      - ./hr-service:/var/www/html
+      - ./docker/nginx/hr-service.conf:/etc/nginx/sites-available/default
+      - ./docker/supervisor/web.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh
+    ports:
+      - "8001:80"
+    environment:
+      APP_NAME: "HR Service"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8001
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: hr_service_db
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - platform-net
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+  # ─── Hub Service ───────────────────────────────────────
+  hub-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: mcp-hub-service
+    volumes:
+      - ./hub-service:/var/www/html
+      - ./docker/nginx/hub-service.conf:/etc/nginx/sites-available/default
+      - ./docker/supervisor/web.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh
+    ports:
+      - "8002:80"
+    environment:
+      APP_NAME: "Hub Service"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8002
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: hub_service_db
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      HR_SERVICE_URL: http://hr-service
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BROADCAST_CONNECTION: pusher
+      PUSHER_APP_ID: multi-country-app
+      PUSHER_APP_KEY: app-key
+      PUSHER_APP_SECRET: app-secret
+      PUSHER_HOST: soketi
+      PUSHER_PORT: 6001
+      PUSHER_SCHEME: http
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      soketi:
+        condition: service_started
+    networks:
+      - platform-net
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+  # ─── Hub Worker (RabbitMQ Consumer) ────────────────────
+  hub-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: mcp-hub-worker
+    volumes:
+      - ./hub-service:/var/www/html
+      - ./docker/supervisor/worker.conf:/etc/supervisor/conf.d/supervisord.conf
+      - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh
+    environment:
+      APP_NAME: "Hub Worker"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8002
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: hub_service_db
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      HR_SERVICE_URL: http://hr-service
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BROADCAST_CONNECTION: pusher
+      PUSHER_APP_ID: multi-country-app
+      PUSHER_APP_KEY: app-key
+      PUSHER_APP_SECRET: app-secret
+      PUSHER_HOST: soketi
+      PUSHER_PORT: 6001
+      PUSHER_SCHEME: http
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      soketi:
+        condition: service_started
+    networks:
+      - platform-net
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+
+networks:
+  platform-net:
+    driver: bridge
