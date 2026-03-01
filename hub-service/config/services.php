@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'hr_service' => [
+        'url' => env('HR_SERVICE_URL', 'http://hr-service.test'),
+    ],
+
 ];
