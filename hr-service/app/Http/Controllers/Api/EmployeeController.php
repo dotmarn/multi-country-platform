@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Log;
+use Ramsey\Uuid\Uuid;
 
 class EmployeeController extends Controller
 {
@@ -21,7 +22,7 @@ class EmployeeController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Employee::query()->when($request->has('country'), function ($q) use ($request) {);
+        $query = Employee::query()->when($request->has('country'), function ($q) use ($request) {
             $q->where('country', $request->input('country'));
         });
 
@@ -74,7 +75,7 @@ class EmployeeController extends Controller
         try {
             $payload = [
                 'event_type' => $eventType,
-                'event_id' => (string) \Ramsey\Uuid\Uuid::uuid4(),
+                'event_id' => (string) Uuid::uuid4(),
                 'timestamp' => now()->toIso8601String(),
                 'country' => $employee?->country ?? $deletedData['country'] ?? 'unknown',
                 'data' => [
