@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Enums\EventTypesEnum;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -27,7 +28,7 @@ class EmployeeListUpdated implements ShouldBroadcast
 
     public function broadcastAs(): string
     {
-        return 'employee.list.updated';
+        return EventTypesEnum::EMPLOYEE_LIST_UPDATED->value;
     }
 
     public function broadcastWith(): array

@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Enums\EventTypesEnum;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -25,7 +26,7 @@ class ChecklistUpdated implements ShouldBroadcast
 
     public function broadcastAs(): string
     {
-        return 'checklist.updated';
+        return EventTypesEnum::CHECKLIST_UPDATED->value;
     }
 
     public function broadcastWith(): array
