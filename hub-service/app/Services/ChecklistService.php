@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StatusEnum;
 use App\Validators\CountryValidatorFactory;
 use Illuminate\Support\Facades\Log;
 
@@ -25,7 +26,7 @@ class ChecklistService
         }
 
         $checklist = $this->computeChecklist($country);
-        
+
         $this->cacheService->putChecklist($country, $checklist);
 
         return $checklist;
@@ -45,7 +46,7 @@ class ChecklistService
         foreach ($employees as $employee) {
             $fields = $validator->validate($employee);
             $totalFields = count($fields);
-            $completedFields = count(array_filter($fields, fn ($f) => $f['status'] === 'complete'));
+            $completedFields = count(array_filter($fields, fn ($f) => $f['status'] === StatusEnum::STATUS_COMPLETE->value));
             $completionPercentage = $totalFields > 0 ? round(($completedFields / $totalFields) * 100, 1) : 0;
             $isComplete = $completedFields === $totalFields;
 
