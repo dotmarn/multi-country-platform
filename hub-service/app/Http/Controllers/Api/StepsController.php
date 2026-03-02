@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CountryRequest;
+use App\Http\Resources\StepsResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -18,10 +19,7 @@ class StepsController extends Controller
         return response()->success(
             Response::HTTP_OK,
             "Steps fetched successfully for country '{$country}'.",
-            [
-                'country' => $country,
-                'steps' => $steps,
-            ]
+            new StepsResource(['country' => $country, 'steps' => $steps])
         );
     }
 }

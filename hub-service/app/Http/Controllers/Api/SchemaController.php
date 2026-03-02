@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\EventTypesEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CountryRequest;
+use App\Http\Resources\SchemaResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -34,11 +35,11 @@ class SchemaController extends Controller
         return response()->success(
             Response::HTTP_OK,
             "Schema for step '{$stepId}' fetched successfully.",
-            [
+            new SchemaResource([
                 'country' => $country,
                 'step_id' => $stepId,
                 'schema' => $schema,
-            ]
+            ])
         );
     }
 
