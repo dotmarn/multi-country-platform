@@ -4,7 +4,7 @@ A real-time, event-driven backend platform built with Laravel, demonstrating mic
 
 ## Technology Stack
 
-- **Framework**: Laravel 12 (PHP 8.3)
+- **Framework**: Laravel 12 (PHP 8.4)
 - **Database**: PostgreSQL 16
 - **Message Queue**: RabbitMQ 3.13 (AMQP topic exchange)
 - **Cache**: Redis 7
