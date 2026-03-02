@@ -99,6 +99,16 @@ docker-compose exec hub-service php artisan test
 
 - `GET /api/employees` — List employees (filterable by `country`)
 - `POST /api/employees` — Create employee
+```json
+{
+    "name": "John",
+    "last_name": "Doe",
+    "salary": 75000,
+    "country": "USA",
+    "ssn": "123-45-6789",
+    "address": "123 Main St, NY"
+}
+```
 - `GET /api/employees/{id}` — Get employee
 - `PUT /api/employees/{id}` — Update employee
 - `DELETE /api/employees/{id}` — Delete employee
