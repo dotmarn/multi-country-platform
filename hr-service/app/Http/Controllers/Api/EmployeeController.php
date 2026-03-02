@@ -107,7 +107,7 @@ class EmployeeController extends Controller
             ];
 
             $country = Str::lower($payload['country']);
-            $eventAction = Str::lower(Str::replace('employee', '', $eventType));
+            $eventAction = Str::lower(Str::replace('Employee', '', $eventType));
             $routingKey = "employee.{$eventAction}.{$country}";
 
             $this->rabbitMQService->publish(
