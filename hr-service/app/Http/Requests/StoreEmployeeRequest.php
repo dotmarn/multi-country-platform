@@ -3,7 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Enums\CountryEnum;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 class StoreEmployeeRequest extends FormRequest
@@ -43,5 +46,14 @@ class StoreEmployeeRequest extends FormRequest
             'ssn.regex' => 'SSN must be in format XXX-XX-XXXX.',
             'tax_id.regex' => 'Tax ID must be in format DE followed by 9 digits (e.g., DE123456789).',
         ];
+    }
+
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(response()->error(
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            'There is one or more validation errors',
+            $validator->errors()
+        ));
     }
 }
