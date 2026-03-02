@@ -5,7 +5,7 @@ namespace App\Enums;
 enum CountryEnum: string
 {
     case COUNTRY_USA = 'USA';
-    case COUNTRY_GERMANY = 'GERMANY';
+    case COUNTRY_GERMANY = 'Germany';
 
     public static function supportedCountries(): array
     {
