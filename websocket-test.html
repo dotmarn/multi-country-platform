@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test - Multi-Country Platform</title>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+        h1 { color: #00d4ff; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        button { background: #16213e; color: #00d4ff; border: 1px solid #00d4ff; padding: 8px 16px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0f3460; }
+        button.active { background: #00d4ff; color: #1a1a2e; }
+        .log { background: #16213e; border: 1px solid #333; padding: 15px; border-radius: 8px; max-height: 500px; overflow-y: auto; }
+        .log-entry { padding: 4px 0; border-bottom: 1px solid #222; font-size: 13px; }
+        .log-entry .time { color: #888; }
+        .log-entry .channel { color: #ffd700; }
+        .log-entry .event { color: #00ff88; }
+        .log-entry .data { color: #e0e0e0; }
+        .status { padding: 8px 16px; border-radius: 4px; margin-bottom: 15px; }
+        .status.connected { background: #0a3d0a; border: 1px solid #00ff88; }
+        .status.disconnected { background: #3d0a0a; border: 1px solid #ff4444; }
+        #clear-btn { background: #3d0a0a; border-color: #ff4444; color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Test Console</h1>
+        <p>Connects to Soketi via Pusher protocol. Events will appear below in real-time.</p>
+
+        <div id="status" class="status disconnected">Disconnected</div>
+
+        <div class="controls">
+            <button onclick="subscribe('country.USA')">Subscribe: country.USA</button>
+            <button onclick="subscribe('country.Germany')">Subscribe: country.Germany</button>
+            <button onclick="subscribe('checklist.USA')">Subscribe: checklist.USA</button>
+            <button onclick="subscribe('checklist.Germany')">Subscribe: checklist.Germany</button>
+            <button onclick="subscribe('employee.1')">Subscribe: employee.1</button>
+            <button id="clear-btn" onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const pusher = new Pusher('app-key', {
+            wsHost: 'localhost',
+            wsPort: 6001,
+            forceTLS: false,
+            disableStats: true,
+            enabledTransports: ['ws', 'wss'],
+            cluster: 'mt1',
+        });
+
+        const logEl = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+        const subscribedChannels = {};
+
+        // Connection state
+        pusher.connection.bind('connected', () => {
+            statusEl.className = 'status connected';
+            statusEl.textContent = 'Connected to Soketi (ws://localhost:6001)';
+            addLog('system', 'connection', 'Connected successfully');
+        });
+
+        pusher.connection.bind('disconnected', () => {
+            statusEl.className = 'status disconnected';
+            statusEl.textContent = 'Disconnected';
+            addLog('system', 'connection', 'Disconnected');
+        });
+
+        pusher.connection.bind('error', (err) => {
+            addLog('system', 'error', JSON.stringify(err));
+        });
+
+        function subscribe(channelName) {
+            if (subscribedChannels[channelName]) {
+                addLog(channelName, 'info', 'Already subscribed');
+                return;
+            }
+
+            const channel = pusher.subscribe(channelName);
+            subscribedChannels[channelName] = channel;
+
+            // Bind to all known events
+            const events = [
+                'employee.list.updated',
+                'checklist.updated',
+                'employee.data.changed',
+            ];
+
+            events.forEach(eventName => {
+                channel.bind(eventName, (data) => {
+                    addLog(channelName, eventName, JSON.stringify(data, null, 2));
+                });
+            });
+
+            channel.bind('pusher:subscription_succeeded', () => {
+                addLog(channelName, 'subscribed', 'Subscription successful');
+            });
+
+            // Highlight the button
+            document.querySelectorAll('button').forEach(btn => {
+                if (btn.textContent.includes(channelName)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            addLog(channelName, 'subscribing', `Subscribing to ${channelName}...`);
+        }
+
+        function addLog(channel, event, data) {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="time">[${time}]</span> <span class="channel">${channel}</span> <span class="event">${event}</span><br><span class="data">${data}</span>`;
+            logEl.prepend(entry);
+        }
+
+        function clearLog() {
+            logEl.innerHTML = '';
+        }
+
+        // Auto-subscribe to main channels
+        subscribe('country.USA');
+        subscribe('country.Germany');
+        subscribe('checklist.USA');
+        subscribe('checklist.Germany');
+    </script>
+</body>
+</html>
