@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\EventTypeEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
@@ -10,8 +11,9 @@ use App\Models\Employee;
 use App\Services\RabbitMQService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Ramsey\Uuid\Uuid;
 
 class EmployeeController extends Controller
@@ -20,7 +22,7 @@ class EmployeeController extends Controller
         private readonly RabbitMQService $rabbitMQService
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
         $query = Employee::query()->when($request->has('country'), function ($q) use ($request) {
             $q->where('country', $request->input('country'));
@@ -29,34 +31,48 @@ class EmployeeController extends Controller
         $perPage = $request->input('per_page', 15);
         $employees = $query->paginate($perPage);
 
-        return EmployeeResource::collection($employees);
+        return response()->success(
+            Response::HTTP_OK,
+            'Employees fetched successfully',
+            EmployeeResource::collection($employees)
+        );
     }
 
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
         $employee = Employee::create($request->validated());
 
-        $this->publishEvent('EmployeeCreated', $employee);
+        $this->publishEvent(EventTypeEnum::EMPLOYEE_CREATED->value, $employee);
 
-        return (new EmployeeResource($employee))
-            ->response()
-            ->setStatusCode(201);
+        return response()->success(
+            Response::HTTP_CREATED,
+            'Employee created successfully',
+            new EmployeeResource($employee)
+        );
     }
 
-    public function show(Employee $employee): EmployeeResource
+    public function show(Employee $employee): JsonResponse
     {
-        return new EmployeeResource($employee);
+        return response()->success(
+            Response::HTTP_OK,
+            'Employee fetched successfully',
+            new EmployeeResource($employee)
+        );
     }
 
-    public function update(UpdateEmployeeRequest $request, Employee $employee): EmployeeResource
+    public function update(UpdateEmployeeRequest $request, Employee $employee): JsonResponse
     {
         $employee->update($request->validated());
 
         $changedFields = $employee->getChangedFields();
 
-        $this->publishEvent('EmployeeUpdated', $employee, $changedFields);
+        $this->publishEvent(EventTypeEnum::EMPLOYEE_UPDATED->value, $employee, $changedFields);
 
-        return new EmployeeResource($employee);
+        return response()->success(
+            Response::HTTP_OK,
+            'Employee updated successfully',
+            new EmployeeResource($employee)
+        );
     }
 
     public function destroy(Employee $employee): JsonResponse
@@ -65,9 +81,12 @@ class EmployeeController extends Controller
 
         $employee->delete();
 
-        $this->publishEvent('EmployeeDeleted', null, [], $employeeData);
+        $this->publishEvent(EventTypeEnum::EMPLOYEE_DELETED->value, null, [], $employeeData);
 
-        return response()->json(['message' => 'Employee deleted successfully.'], 200);
+        return response()->success(
+            Response::HTTP_OK,
+            'Employee deleted successfully'
+        );
     }
 
     private function publishEvent(string $eventType, ?Employee $employee, array $changedFields = [], array $deletedData = []): void
@@ -87,8 +106,8 @@ class EmployeeController extends Controller
                 ],
             ];
 
-            $country = strtolower($payload['country']);
-            $eventAction = strtolower(str_replace('Employee', '', $eventType));
+            $country = Str::lower($payload['country']);
+            $eventAction = Str::lower(Str::replace('employee', '', $eventType));
             $routingKey = "employee.{$eventAction}.{$country}";
 
             $this->rabbitMQService->publish(
