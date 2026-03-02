@@ -12,20 +12,22 @@ class SchemaApiTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'country',
-                'step_id',
-                'schema' => [
-                    'type',
-                    'widgets' => [
-                        '*' => ['id', 'type', 'title', 'data_source', 'refresh_channel'],
+                'data' => [
+                    'country',
+                    'step_id',
+                    'schema' => [
+                        'type',
+                        'widgets' => [
+                            '*' => ['id', 'type', 'title', 'data_source', 'refresh_channel'],
+                        ],
                     ],
                 ],
             ])
-            ->assertJsonPath('step_id', 'dashboard')
-            ->assertJsonPath('schema.type', 'dashboard')
-            ->assertJsonCount(3, 'schema.widgets');
+            ->assertJsonPath('data.step_id', 'dashboard')
+            ->assertJsonPath('data.schema.type', 'dashboard')
+            ->assertJsonCount(3, 'data.schema.widgets');
 
-        $widgetIds = collect($response->json('schema.widgets'))->pluck('id')->toArray();
+        $widgetIds = collect($response->json('data.schema.widgets'))->pluck('id')->toArray();
         $this->assertContains('employee_count', $widgetIds);
         $this->assertContains('average_salary', $widgetIds);
         $this->assertContains('completion_rate', $widgetIds);
@@ -36,10 +38,10 @@ class SchemaApiTest extends TestCase
         $response = $this->getJson('/api/schema/dashboard?country=Germany');
 
         $response->assertStatus(200)
-            ->assertJsonPath('schema.type', 'dashboard')
-            ->assertJsonCount(2, 'schema.widgets');
+            ->assertJsonPath('data.schema.type', 'dashboard')
+            ->assertJsonCount(2, 'data.schema.widgets');
 
-        $widgetIds = collect($response->json('schema.widgets'))->pluck('id')->toArray();
+        $widgetIds = collect($response->json('data.schema.widgets'))->pluck('id')->toArray();
         $this->assertContains('employee_count', $widgetIds);
         $this->assertContains('goal_tracking', $widgetIds);
     }

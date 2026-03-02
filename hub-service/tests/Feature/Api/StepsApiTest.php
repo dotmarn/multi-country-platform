@@ -12,15 +12,17 @@ class StepsApiTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'country',
-                'steps' => [
-                    '*' => ['id', 'label', 'icon', 'path', 'order', 'is_active'],
+                'data' => [
+                    'country',
+                    'steps' => [
+                        '*' => ['id', 'label', 'icon', 'path', 'order', 'is_active'],
+                    ],
                 ],
             ])
-            ->assertJsonPath('country', 'USA')
-            ->assertJsonCount(2, 'steps');
+            ->assertJsonPath('data.country', 'USA')
+            ->assertJsonCount(2, 'data.steps');
 
-        $stepIds = collect($response->json('steps'))->pluck('id')->toArray();
+        $stepIds = collect($response->json('data.steps'))->pluck('id')->toArray();
         $this->assertEquals(['dashboard', 'employees'], $stepIds);
     }
 
@@ -29,10 +31,10 @@ class StepsApiTest extends TestCase
         $response = $this->getJson('/api/steps?country=Germany');
 
         $response->assertStatus(200)
-            ->assertJsonPath('country', 'Germany')
-            ->assertJsonCount(3, 'steps');
+            ->assertJsonPath('data.country', 'Germany')
+            ->assertJsonCount(3, 'data.steps');
 
-        $stepIds = collect($response->json('steps'))->pluck('id')->toArray();
+        $stepIds = collect($response->json('data.steps'))->pluck('id')->toArray();
         $this->assertEquals(['dashboard', 'employees', 'documentation'], $stepIds);
     }
 
