@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -19,6 +20,7 @@ class RabbitMQService
 
     /**
      * Get or create a RabbitMQ connection.
+     * @throws Exception
      */
     private function getConnection(): AMQPStreamConnection
     {
