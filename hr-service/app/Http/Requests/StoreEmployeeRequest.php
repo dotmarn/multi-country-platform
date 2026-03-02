@@ -22,7 +22,7 @@ class StoreEmployeeRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'salary' => ['required', 'numeric', 'gt:0'],
-            'country' => ['required', 'string', Rule::in(CountryEnum::supportedCountries())],
+            'country' => ['required', 'string', Rule::enum(CountryEnum::class)],
         ];
 
         $country = $this->input('country');
