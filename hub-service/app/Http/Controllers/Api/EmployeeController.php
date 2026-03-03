@@ -15,7 +15,7 @@ class EmployeeController extends Controller
         private readonly EmployeeCacheService $cacheService,
     ) {}
 
-    public function index(CountryRequest $request): JsonResponse
+    public function __invoke(CountryRequest $request): JsonResponse
     {
         $country = $request->validated('country');
         $page = (int) $request->input('page', 1);

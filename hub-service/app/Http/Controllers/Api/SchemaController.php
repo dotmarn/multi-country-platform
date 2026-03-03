@@ -11,7 +11,7 @@ use Illuminate\Http\Response;
 
 class SchemaController extends Controller
 {
-    public function show(CountryRequest $request, string $stepId): JsonResponse
+    public function __invoke(CountryRequest $request, string $stepId): JsonResponse
     {
         $country = $request->validated('country');
 

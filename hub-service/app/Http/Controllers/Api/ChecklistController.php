@@ -15,7 +15,7 @@ class ChecklistController extends Controller
         private readonly ChecklistService $checklistService,
     ) {}
 
-    public function index(CountryRequest $request): JsonResponse
+    public function __invoke(CountryRequest $request): JsonResponse
     {
         $country = $request->validated('country');
 
