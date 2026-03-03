@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
 use Exception;
 use Illuminate\Support\Str;
