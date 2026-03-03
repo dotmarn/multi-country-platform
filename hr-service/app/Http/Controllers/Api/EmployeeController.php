@@ -12,9 +12,6 @@ use App\Services\RabbitMQService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Ramsey\Uuid\Uuid;
 
 class EmployeeController extends Controller
 {

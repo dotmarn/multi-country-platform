@@ -62,7 +62,6 @@ class RabbitMQService
     {
         $channel = $this->getChannel();
 
-        // Declare the topic exchange (idempotent)
         $channel->exchange_declare(
             exchange: $exchange,
             type: AMQPExchangeType::TOPIC,
