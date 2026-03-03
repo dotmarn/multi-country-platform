@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\EventTypeEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreEmployeeRequest;
-use App\Http\Requests\UpdateEmployeeRequest;
+use App\Http\Requests\EmployeeRequest;
 use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
 use App\Services\RabbitMQService;
@@ -35,7 +34,7 @@ class EmployeeController extends Controller
         );
     }
 
-    public function store(StoreEmployeeRequest $request): JsonResponse
+    public function store(EmployeeRequest $request): JsonResponse
     {
         $employee = Employee::create($request->validated());
 
@@ -57,7 +56,7 @@ class EmployeeController extends Controller
         );
     }
 
-    public function update(UpdateEmployeeRequest $request, Employee $employee): JsonResponse
+    public function update(EmployeeRequest $request, Employee $employee): JsonResponse
     {
         $employee->update($request->validated());
 
