@@ -42,7 +42,7 @@ class EmployeeController extends Controller
     {
         $employee = Employee::create($request->validated());
 
-        $this->publishEvent(EventTypeEnum::EMPLOYEE_CREATED->value, $employee);
+        $this->rabbitMQService->publishEvent(EventTypeEnum::EMPLOYEE_CREATED->value, $employee);
 
         return response()->success(
             Response::HTTP_CREATED,
@@ -66,7 +66,7 @@ class EmployeeController extends Controller
 
         $changedFields = $employee->getChangedFields();
 
-        $this->publishEvent(EventTypeEnum::EMPLOYEE_UPDATED->value, $employee, $changedFields);
+        $this->rabbitMQService->publishEvent(EventTypeEnum::EMPLOYEE_UPDATED->value, $employee, $changedFields);
 
         return response()->success(
             Response::HTTP_OK,
@@ -81,51 +81,11 @@ class EmployeeController extends Controller
 
         $employee->delete();
 
-        $this->publishEvent(EventTypeEnum::EMPLOYEE_DELETED->value, null, [], $employeeData);
+        $this->rabbitMQService->publishEvent(EventTypeEnum::EMPLOYEE_DELETED->value, null, [], $employeeData);
 
         return response()->success(
             Response::HTTP_OK,
             'Employee deleted successfully'
         );
-    }
-
-    private function publishEvent(string $eventType, ?Employee $employee, array $changedFields = [], array $deletedData = []): void
-    {
-        try {
-            $payload = [
-                'event_type' => $eventType,
-                'event_id' => (string) Uuid::uuid4(),
-                'timestamp' => now()->toIso8601String(),
-                'country' => $employee?->country ?? $deletedData['country'] ?? 'unknown',
-                'data' => [
-                    'employee_id' => $employee?->id ?? $deletedData['id'] ?? null,
-                    'changed_fields' => $changedFields,
-                    'employee' => $employee
-                        ? (new EmployeeResource($employee))->resolve()
-                        : $deletedData,
-                ],
-            ];
-
-            $country = Str::lower($payload['country']);
-            $eventAction = Str::lower(Str::replace('Employee', '', $eventType));
-            $routingKey = "employee.{$eventAction}.{$country}";
-
-            $this->rabbitMQService->publish(
-                exchange: 'employee_events',
-                routingKey: $routingKey,
-                message: $payload
-            );
-
-            Log::info("Published {$eventType} event", [
-                'event_id' => $payload['event_id'],
-                'employee_id' => $payload['data']['employee_id'],
-                'routing_key' => $routingKey,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error("Failed to publish {$eventType} event", [
-                'error' => $e->getMessage(),
-                'employee_id' => $employee?->id ?? $deletedData['id'] ?? null,
-            ]);
-        }
     }
 }
